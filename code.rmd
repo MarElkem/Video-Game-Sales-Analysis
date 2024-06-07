@@ -1,0 +1,274 @@
+---
+title: "MSCS 164B Final Project: Video Game Trends"
+subtitle: "Maroova Elkemary"
+output:
+  html_document:
+    theme:
+      version: 4
+      bootswatch: sketchy
+urlcolor: blue
+editor_options:
+  chunk_output_type: console
+---
+<br>
+<br>
+<br>
+<br>
+<br>
+ 
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+```
+ 
+
+##  A Brief History Of Video Games 
+
+The first ever video game was released October 18, 1958, more than 60 years ago!
+It was made by William Higinbotham's and surprise, it was a tennis simulation game called "Tennis for Two".<br>
+Today, the video game industry is valued at 347 billion U.S. dollars with mobile video games accounting for more than half of that value! Video games have long evolved since then and now involve complex graphics and a wide range of audience with dedicated events, awards, storylines, and a whole universe!
+
+##  About Our Dataset
+
+Our dataset is scraped off from http://www.vgchartz.com/ and contains a list of video games with sales greater than 100,000 copies. Some of our variables include the year of release, genre, sales in different regions, and the score a game has received from critics and users. The data is sourced from Kaggle: https://www.kaggle.com/datasets/gregorut/videogamesales and was uploaded to a personal github repo.
+
+##  What is Your Favorite Genre?
+
+What is your favorite genre of movies? Music? Shows? How about video games? There are about 10 main genres of video games with some subgenres. We will take a look at the most popular ones, given that popularity is $! For clarity, some genres that are similar have been combined together (such as sports and racing, or shooter and fighting) as well as we will only look at games from 2010-2016. Before looking at the plot, can you guess what is the most popular genre?
+
+
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(viridis)
+library(ggthemes)
+library(readr)
+library(forcats)
+library(ggplot2)
+library(ggridges)
+library(shiny)
+library(plotly)
+library(gapminder)
+library(gganimate)
+library(transformr)
+library(ggplot2)
+library(gganimate)
+library(babynames)
+
+
+
+
+```
+
+
+ 
+
+```{r, echo=FALSE}
+
+data <- read_csv("Video_Games_Sales_as_at_22_Dec_2016.csv") 
+
+data <- data %>% 
+  rename(Year = Year_of_Release) %>% #rename for ease of use
+  mutate(across(c(Year, User_Score), parse_number),  #convert to numeric
+         Critic_Score= (Critic_Score) / 10) %>% #user score is out of 10 but critic is out of 100, we scale critic
+  drop_na()
+```
+
+
+
+
+```{r, echo=FALSE}
+data %>%
+  filter(Year > 2009, Year < 2017) %>%
+  filter(!Genre %in% c("Misc", "Platform")) %>%
+  drop_na(Genre) %>%
+  mutate(Genre = as.factor(Genre)) %>%
+  mutate(Genre = fct_recode(Genre,
+                            "Shooter/Fighting" = "Shooter",
+                            "Shooter/Fighting" = "Fighting",
+                            "Sports/Racing" = "Sports",
+                            "Sports/Racing" = "Racing",
+                            "Puzzle/Strategy" = "Puzzle",
+                            "Puzzle/Strategy" = "Strategy",
+                            "Role-Playing/Simulation" = "Role-Playing",
+                            "Role-Playing/Simulation" = "Simulation")) %>%
+  ggplot(aes(x = Year, y = Global_Sales, fill = Genre)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~Genre) +
+  labs(title = "Genre Popularity Over the Years",
+       x = "Year",
+       y = "Total Sales (in Millions $)",
+       caption = "Source: https://www.kaggle.com/datasets/gregorut/videogamesales", #not sure why not outputting
+       fill = "Genre") +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  theme(legend.position = "top") -> pop_int  # Assign plot to an object
+
+ggplotly(pop_int)
+```
+
+**If you guessed Action games, you are correct! Although this genre has been declining over the years, it has the most sales by far- followed by Sports/Racing and Shooter/Fighting games! There is a spike in Action games in the year 2013...Why is that? With a little bit of research we see that GTA 5 was released on that year and it is known to be one of the most successful games ever released!**
+
+<br>
+<br>
+<br>
+<br>
+
+
+##  Bye Oscars, Hello Game Awards 
+
+The fans and their debates on the best games are no less elaborate than any other critique analysis of other forms of media. In fact, according to The Washington Post: "Game award shows have become the most-watched awards ceremony in entertainment, with 103 million streams for last year's event (by rough comparison, the Oscars struggle to hit 20 million television viewers)."
+<br>
+<br>
+Critics and Users alike influence the awards delivered to games greatly. Of course, we know that money and production is an important factor as well. Do you think there is a correlation between the score a game receives from critics and users and how successful a game was in terms of sales? Lets take a look. We will separate our dataset into 4 windows with 4 year increments, then we will see the user scores on the x axis and the critic scores on the y axis. Pink dots represent games with 0-1 million global sales, green for 1-2 million sales, 2-3 million sales, 3-4 million sales, and 4+ million sales.
+
+
+
+```{r, echo=FALSE}
+
+data %>%
+  filter(!is.na(Year), Year >= 1995 & Year <= 2017) %>%
+  arrange(desc(Global_Sales)) %>%
+  mutate(Sales_Category = cut(Global_Sales, 
+                              breaks = c(0, 1, 2, 3, 4, Inf),
+                              labels = c("0-1 Million", "1-2 Million", "2-3 Million", "3-4 Million", "4+ Million"),
+                                                           include.lowest = TRUE),
+          Year_Range = case_when(
+           Year >= 1995 & Year <= 1999 ~ "1995-1999",
+           Year >= 2000 & Year <= 2004 ~ "2000-2004",
+           Year >= 2005 & Year <= 2009 ~ "2005-2009",
+           Year >= 2010 & Year <= 2017 ~ "2010-2017",
+           )) %>%
+  ggplot(aes(x = User_Score, y = Critic_Score, size = Global_Sales, color = Sales_Category)) +
+    geom_point(alpha = 0.5) +
+    scale_size_area(max_size = 12, guide = "none") + 
+    scale_color_manual(values = c("Pink", "Green", "Blue", "Purple", "Orange")) +
+    labs(title = "Best-Selling Video Games: Critic vs User Scores",
+         subtitle = "Scores scaled to a maximum of 10 points. Size of points reflects global sales volume.",
+         x = "User Score",
+         y = "Critic Score",
+         color= "Sales",
+         caption = "Data source: Video Games Sales as at 22 Dec 2016.") +
+    facet_wrap(~Year_Range) +  # Add faceting by year ranges
+    theme_minimal()
+
+```
+
+**Let's disect that! First we see that over the years, more and more games are being released that do not necessarily go big in sales- this is possibly because many people have access to create "indie" games starting from the 2000s. Indie games are "independent" games that are mostly released by smaller companies. **
+
+<br>
+**Next, we can see that in general most critic scores match or fluctuate slightly from user scores- which is the case with most media**
+
+<br>
+
+**Finally, we see that over the years more and more games are being released that sold a lot of copies but receive low ratings, which means that the number of sales for a game is not a defining indicator of the score that it will receive as we see points of all colors scattered all over. Perhaps years ago- the more a game sold the higher the critic and user score was- but as of recently, it is no longer a determining factor**
+<br>
+<br>
+<br>
+<br>
+
+##  Behind The Scenes 
+
+So, now we know a lot about genres of games, game sales, and user/critic scoring of games. Now we want to discover who are the biggest companies that are behind some of the biggest games that we know and enjoy till today.
+
+<br>
+<br>
+To do so, let us see the top 5 publishers based on global sales. For an even deeper analysis, try __hovering__ over the different lines in the bars to see __what game__ made a company so much profit- as the area indicates a chunk of sales shown in the y axis!
+
+```{r, echo=FALSE}
+#Make a filterted dataset that shows the top publishers by sales using slice_max, group_by, and summarize
+top_publishers <- data %>%
+  group_by(Publisher) %>%
+  summarize(Total_Global_Sales = sum(Global_Sales)) %>%
+  slice_max(Total_Global_Sales, n = 5) %>%
+  select(Publisher)
+
+# Filter data for the top publishers and also excluding years not in the dataset using semi_join
+filtered_data <- data %>%
+  semi_join(top_publishers, by = "Publisher") %>%
+  filter(Year > 2000 & !Year %in% c("2017", "2020", "N/A"))
+
+# make a bar plot nd use text for tooltip in plotly to have show the name, sales, and publisher of the game
+publisher_interactive <- ggplot(filtered_data, aes(x = Year, y = Global_Sales, fill = Publisher, text = paste("Game: ", Name))) +
+
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Top 5 Publishers Global Sales Over the Years",
+       x = "Year",
+       y = "Global Sales (in Millions $)") +
+  theme_minimal() +
+  scale_fill_viridis_d(name = "Publisher") +
+  theme(legend.position = "right") 
+
+#pipe to plotly
+publisher_interactive <- ggplotly(publisher_interactive) 
+
+publisher_interactive
+
+```
+
+**A very pretty plot! First we identify that the top publishers are Activision (famous for Call of Duty, EA (Famous for FIFA and other sports), Nintendo (famous for Wii/Mario games), Sony (famous for story roleplaying games and racing games), and finally Take-Two Interactive (Famous for GTA Games).**
+
+<br>
+<br>
+
+**We see immeditaly that the bar for year 2006 sticks out like a sore thumb with one game capturing a big chunk of the sales! Wonder what game it is? Well- hover and you will discover it is Wii Soirts by Nintendo which had a whopping $82.53 million dollars in global sales!**
+<br>
+<br>
+<br>
+<br>
+
+##  Microsoft vs Apple? No, Xbox Vs PlayStation! 
+Gamers continuously wonder which platform is better to play on- primarily the main competitors are Xbox by Microsoft and PlayStation by Sony. A lot goes into this competition- Microsoft and Sony work with game developers to ensure games release exclusively only on their platform- or they take multiplayer games and disallow crossplay (which is when you are unable to play online games with other uses because they use a different platform), causing you to fight with your friends at the end! 
+
+<br>
+<br>
+So, let us analyze from the 90s until the 2010s, what were the most popular gaming platforms? We will do so by counting the number of games that were released for every platform! 
+
+
+```{r, eval=FALSE, echo=FALSE}
+data %>%
+  filter(Year> 1994 & Year< 2017) %>% 
+  filter(!Platform %in% c("DC", "GBA", "PSV", "GC")) %>% 
+    mutate(Year = round(Year, digits=0),  # Round Year to nearest integer for some reason
+           Platform = fct_collapse(Platform,
+                                  "3DS/DS" = c("3DS", "DS"),
+                                  "PS/PS2/PS3/PS4" = c("PS", "PS2", "PS3", "PS4"),
+                                  "Xbox/Xbox 360/Xbox One" = c("X360", "XB", "XOne"),
+                                  "Wii/WiiU" = c("Wii", "WiiU"))) %>%
+    group_by(Year, Platform) %>%
+    summarise(Count = n(), .groups = 'drop') %>%
+  ggplot( aes(x=Year, y=Count, group=Platform, color=Platform)) +
+    geom_line() +
+    geom_point() +
+    scale_color_viridis(discrete = TRUE) +
+    ggtitle("Popularity of Platforms Over the Years.") +
+    ylab("Number of Games Released") +
+    transition_reveal(Year)
+
+anim_save("platforrrr.gif")
+
+```
+![](platforrrr.gif){width=75%}
+
+
+**And so it seems like Playstation is most popular, but the reason could be that it is the older platform as well! Other handheld platforms are roughly around the same league- with Nintendo and Wii leading the pack!**
+<br>
+<br>
+<br>
+
+
+##  Conclusion 
+Games are a whole universe, with dedicated storylines, motion tracker acting, soundtrack producers, and a whole team of sleepless nights to deliver a product that puts a smile on a fan's face. Regardless of sales, popularity, and public opinion... __What is your favorite game?__
+<br>
+<br>
+<br>
+
+<br>
+
+
+__References__
+<br>
+https://www.kaggle.com/datasets/gregorut/ <br>
+https://www.bnl.gov/about/history/firstvideo.php <br>
+https://www.washingtonpost.com/entertainment/video-games/2023/12/08/game-awards-winners-losers/
+
